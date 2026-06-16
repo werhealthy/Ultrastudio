@@ -7,7 +7,10 @@
   "editorType": ["figma"],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["https://ultrastudio.vercel.app", "https://jyvud6cnlhkjkjpv.public.blob.vercel-storage.com"],
+    "allowedDomains": [
+      "https://ultrastudio.vercel.app",
+      "https://*.public.blob.vercel-storage.com"
+    ],
     "devAllowedDomains": ["http://localhost:3000"]
   }
 }

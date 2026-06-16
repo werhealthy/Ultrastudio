@@ -88,8 +88,8 @@ export async function GET(request: Request) {
     finalAssetFile: "demo-final-campaign.png",
   };
 
-  const personFile = data.personAssetFile || "person-approved.png";
-  const finalFile  = data.finalAssetFile  || "demo-final-campaign.png";
+  const personFile = data.personImageUrl || `${baseUrl}/api/figma/asset/person-approved.png`;
+  const finalFile  = data.finalImageUrl  || personFile;
 
   return NextResponse.json({
     campaignName:   data.campaignName  || "TIM WiFi Casa",
@@ -100,9 +100,9 @@ export async function GET(request: Request) {
     cta:            data.cta           || "",
     legalNotes:     data.legalNotes    || "",
     legalNotice:    data.legalNotes    || "",
-    personImageUrl: `${baseUrl}/api/figma/asset/${personFile}`,
-    imageUrl:       `${baseUrl}/api/figma/asset/${personFile}`,
-    finalImageUrl:  `${baseUrl}/api/figma/asset/${finalFile}`,
+    personImageUrl: personFile,
+    imageUrl:       personFile,
+    finalImageUrl:  finalFile,
     logoUrl:        `${baseUrl}/api/figma/asset/logo-ultrastudio.png`,
   }, { headers: corsHeaders() });
 }
@@ -111,18 +111,10 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as LatestPayload;
 
-    // Ricava il nome del file soggetto dall'URL
-    let personAssetFile = "person-approved.png";
-    if (body.personImageUrl) {
-      const file = fileFromAssetUrl(body.personImageUrl);
-      if (file) personAssetFile = file;
-    }
-
-    let finalAssetFile = personAssetFile;
-    if (body.finalImageUrl) {
-      const file = fileFromAssetUrl(body.finalImageUrl);
-      if (file) finalAssetFile = file;
-    }
+    // personImageUrl ora è direttamente un URL Blob pubblico
+    // lo salviamo così com'è nel KV
+    const personImageUrl = body.personImageUrl || "";
+    const finalImageUrl  = body.finalImageUrl  || personImageUrl;
 
     const latest = {
       campaignName:   body.campaignName || "TIM WiFi Casa",
@@ -132,8 +124,8 @@ export async function POST(request: Request) {
       pricePeriod:    body.pricePeriod  || "",
       cta:            body.cta          || "",
       legalNotes:     body.legalNotes   || body.legalNotice || "",
-      personAssetFile,
-      finalAssetFile,
+      personImageUrl,   // URL Blob diretto
+      finalImageUrl,    // URL Blob diretto
       updatedAt: new Date().toISOString(),
     };
 
@@ -148,7 +140,7 @@ export async function POST(request: Request) {
     const list: any[] = Array.isArray(rawList) ? rawList : [];
     const newEntry = { id: `campaign-${Date.now()}`, ...latest };
     const updated = [newEntry, ...list].slice(0, MAX_CAMPAIGNS);
-    await redis.set(CAMPAIGNS_KEY, updated, { ex: 60 * 60 * 24 * 30 }); // 30 giorni
+    await redis.set(CAMPAIGNS_KEY, updated, { ex: 60 * 60 * 24 * 30 });
 
     return NextResponse.json({ ok: true, latest }, { headers: corsHeaders() });
   } catch (error) {

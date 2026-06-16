@@ -287,12 +287,15 @@ export default function UltraStudioApp() {
 
   async function saveLatestForFigma(finalImageUrl?: string) {
     if (mode === "demo") return;
-    const personImageUrl = approvedSubject || visualVariants[selectedVariant];
+    // approvedSubject è ora un URL Blob pubblico (https://xxx.blob.vercel-storage.com/...)
+    const personImageUrl = approvedSubject || apiPersonVariants[selectedVariant] || "";
     if (!personImageUrl) throw new Error("Soggetto non disponibile.");
     const res = await fetch("/api/figma/latest", {
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({
-        campaignName:"TIM WiFi Casa", personImageUrl: undefined, personImageB64: personImageUrl, headline:hero,
+        campaignName:"TIM WiFi Casa",
+        personImageUrl,   // URL Blob diretto — figma/latest lo salva nel KV
+        headline:hero,
         priceLeft, priceRight:formatPriceRight(priceRight), pricePeriod,
         cta, legalNotes, legalNotice:legalNotes,
         finalImageUrl: finalImageUrl || finalPreview || undefined,
