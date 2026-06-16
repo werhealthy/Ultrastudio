@@ -12,7 +12,7 @@ import { buildVisualPrompt, type VisualPromptInput } from "@/lib/openai-prompts"
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const VARIANT_COUNT = 3;
+const VARIANT_COUNT = 1;
 
 function buildCleanPrompt(formData: FormData, variantIndex: number): string {
   const input: VisualPromptInput = {
@@ -47,7 +47,7 @@ async function fetchGeneratedUrl(result: any): Promise<Buffer | null> {
     const r = await fetch(url);
     if (!r.ok) return null;
     return Buffer.from(await r.arrayBuffer());
-  } catch { return null; }
+  } catch (_e) { return null; }
 }
 
 async function cleanGeneratedSubject(inputBuffer: Buffer): Promise<Buffer> {
@@ -90,12 +90,15 @@ export async function POST(request: Request) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: "OPENAI_API_KEY non configurata." }, { status: 500 });
 
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!blobToken) return NextResponse.json({ error: "BLOB_READ_WRITE_TOKEN non configurato." }, { status: 500 });
+
     const formData = await request.formData();
     const model   = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
     const size    = (process.env.OPENAI_IMAGE_SIZE    as any) || "1024x1536";
     const quality = (process.env.OPENAI_IMAGE_QUALITY as any) || "medium";
 
-    console.log(`[generate-visual] model:${model} size:${size} quality:${quality}`);
+    console.log(`[generate-visual] model:${model} size:${size} quality:${quality} blob:${blobToken ? "ok" : "missing"}`);
 
     const client = new OpenAI({ apiKey });
     const timestamp = Date.now();
