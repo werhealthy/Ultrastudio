@@ -52,7 +52,7 @@ const PR_DY = 19;
 const PP_DY = 68;
 
 function generatedDir() {
-  return path.join(process.cwd(), "public", "generated");
+  return process.env.VERCEL ? "/tmp/generated" : path.join(process.cwd(), "public", "generated");
 }
 
 function esc(v = "") {
