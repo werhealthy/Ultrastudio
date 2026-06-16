@@ -198,7 +198,7 @@ async function buildOverlay(payload: ComposePayload, W: number, H: number): Prom
   ).join("\n");
 
   return Buffer.from(`
-<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 1200 628">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="628" viewBox="0 0 1200 628">
 <style>
 ${fonts}
 .hl{font-family:'T','TIM Sans',Arial,sans-serif;font-weight:900;font-size:${HL.size}px;fill:${BLUE};letter-spacing:${HL.ls}px;}
