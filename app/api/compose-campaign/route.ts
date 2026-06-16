@@ -163,15 +163,18 @@ async function fontCss() {
 
 async function readTemplate() {
   const sharp = (await import("sharp")).default;
-  // Usa sempre template-01-base.png — il template pulito senza elementi sovrapposti
+  // FIX: legge il file direttamente con path assoluto — evita il doppio path.join
+  // che si verificava passando un path già assoluto a readTplFile (che aggiungeva
+  // un secondo process.cwd() davanti, producendo un percorso inesistente su Vercel).
   const TEMPLATE_PATH = path.join(process.cwd(), "public", "templates", "template-01-base.png");
-  const tpl = await readTplFile(TEMPLATE_PATH);
-  if (tpl) {
+  try {
+    const tpl = await readFile(TEMPLATE_PATH);
     console.log(`[compose-campaign] template loaded: template-01-base.png, size: ${tpl.length}`);
     return tpl;
+  } catch {
+    console.warn("[compose-campaign] template-01-base.png NOT found — using white canvas");
+    return await sharp({ create:{ width:1200, height:628, channels:4, background:"#FFFFFF" }}).png().toBuffer();
   }
-  console.warn("[compose-campaign] template-01-base.png NOT found — using white canvas");
-  return await sharp({ create:{ width:1200, height:628, channels:4, background:"#FFFFFF" }}).png().toBuffer();
 }
 
 async function buildOverlay(payload: ComposePayload, W: number, H: number): Promise<Buffer> {
