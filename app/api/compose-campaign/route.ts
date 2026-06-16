@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { readFile } from "fs/promises";
+import { readFile, writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { put } from "@vercel/blob";
-import { TEMPLATE_01_LAYOUT } from "@/lib/template-layout";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -131,13 +130,8 @@ async function setupFontConfig() {
 }
 
 async function fontCss() {
-  const f = TEMPLATE_01_LAYOUT.files.fonts;
-  const face = (w: number, file: string) =>
-    `@font-face{font-family:'T';src:local('TIM Sans');font-weight:${w};font-style:normal;}`;
-  // Su Vercel usiamo font-family con nome registrato via fontconfig
-  // Su locale usiamo i data URL embedded
+  // Su Vercel usiamo font-family con nome registrato via fontconfig (fonts.conf punta a public/fonts/)
   if (process.env.VERCEL) {
-    // Font sono in public/fonts/ — fontconfig li trova tramite fonts.conf
     return [
       `@font-face{font-family:'T';src:local('TIMSans-Heavy');font-weight:900;font-style:normal;}`,
       `@font-face{font-family:'T';src:local('TIMSans-Bold');font-weight:700;font-style:normal;}`,
@@ -146,6 +140,12 @@ async function fontCss() {
     ].join("");
   }
   // Locale: embed come base64
+  const fontFiles = {
+    heavy:   "public/fonts/TIMSans-Heavy.ttf",
+    bold:    "public/fonts/TIMSans-Bold.ttf",
+    medium:  "public/fonts/TIMSans-Medium.ttf",
+    regular: "public/fonts/TIMSans-Regular.ttf",
+  };
   const readFontB64 = async (rel: string) => {
     try {
       const b = await readFile(path.join(process.cwd(), rel));
@@ -153,7 +153,8 @@ async function fontCss() {
     } catch { return ""; }
   };
   const [hv,bd,md,rg] = await Promise.all([
-    readFontB64(f.heavy), readFontB64(f.bold), readFontB64(f.medium), readFontB64(f.regular),
+    readFontB64(fontFiles.heavy), readFontB64(fontFiles.bold),
+    readFontB64(fontFiles.medium), readFontB64(fontFiles.regular),
   ]);
   const faceB64 = (src: string, w: number) => src
     ? `@font-face{font-family:'T';src:url('${src}')format('truetype');font-weight:${w};font-style:normal;}` : "";
@@ -162,17 +163,15 @@ async function fontCss() {
 
 async function readTemplate() {
   const sharp = (await import("sharp")).default;
-  const { canvas, files } = TEMPLATE_01_LAYOUT;
-  const tpl = (
-    await readTplFile(path.join("public","templates",files.template)) ||
-    await readTplFile(path.join("public","templates",files.fallbackTemplate))
-  );
+  // Usa sempre template-01-base.png — il template pulito senza elementi sovrapposti
+  const TEMPLATE_PATH = path.join(process.cwd(), "public", "templates", "template-01-base.png");
+  const tpl = await readTplFile(TEMPLATE_PATH);
   if (tpl) {
-    console.log(`[compose-campaign] template loaded: ${files.template}, size: ${tpl.length}`);
+    console.log(`[compose-campaign] template loaded: template-01-base.png, size: ${tpl.length}`);
     return tpl;
   }
-  console.warn("[compose-campaign] template NOT found, using white canvas");
-  return await sharp({ create:{ width:canvas.width, height:canvas.height, channels:4, background:"#FFFFFF" }}).png().toBuffer();
+  console.warn("[compose-campaign] template-01-base.png NOT found — using white canvas");
+  return await sharp({ create:{ width:1200, height:628, channels:4, background:"#FFFFFF" }}).png().toBuffer();
 }
 
 async function buildOverlay(payload: ComposePayload, W: number, H: number): Promise<Buffer> {
@@ -262,7 +261,8 @@ ${hlSvg}${daSvg}${plSvg}${prSvg}${ppSvg}${ctaSvg}${lgSvg}
 
 async function buildSubjectComposite(buf: Buffer, W: number, H: number): Promise<CompositeInput> {
   const sharp = (await import("sharp")).default;
-  const slot = TEMPLATE_01_LAYOUT.subject;
+  // Slot soggetto hardcoded (coordinate Figma per template 1200x628)
+  const slot = { x: 0, y: 0, width: 520, height: 628 };
   const sx = W/1200, sy = H/628;
   const slotW = Math.round(slot.width*sx), slotH = Math.round(slot.height*sy);
   const slotX = Math.round(slot.x*sx),    slotY = Math.round(slot.y*sy);

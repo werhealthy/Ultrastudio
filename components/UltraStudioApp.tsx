@@ -9,7 +9,7 @@ type CopyStage = "choice" | "mood" | "proposals" | "manual" | "price" | "summary
 // Stato della generazione in background
 type GenStatus = "idle" | "running" | "done" | "error";
 
-const CHAR_LIMITS = { hero: 60, cta: 32, legal: 220, mood: 300 } as const;
+const CHAR_LIMITS = { hero: 26, cta: 32, legal: 220, mood: 300 } as const;
 
 const icons = {
   home: "/icons/home.png", star: "/icons/star.png", profile: "/icons/profile.png",
@@ -752,7 +752,14 @@ export default function UltraStudioApp() {
                 <div><span>CTA</span><strong>{cta}</strong></div>
                 <div><span>Note legali</span><strong>{legalNotes||"—"}</strong></div>
               </div>
-              <button className="btn dark" onClick={()=>setHandoff(true)}><Icon src={icons.figma}/>Upload su Figma</button>
+              <div className="button-row" style={{flexDirection:"column",alignItems:"stretch",gap:"10px"}}>
+                <button className="btn dark" onClick={()=>setHandoff(true)}><Icon src={icons.figma}/>Upload su Figma</button>
+                {subject && (
+                  <a className="btn secondary" href={subject} download="ultrastudio-campaign.png" target="_blank" rel="noreferrer">
+                    <Icon src={icons.download}/>Scarica immagine
+                  </a>
+                )}
+              </div>
             </div>
           </div>
           <FooterActions onBack={goBack} hidePrimary/>
