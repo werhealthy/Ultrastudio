@@ -163,11 +163,16 @@ async function fontCss() {
 async function readTemplate() {
   const sharp = (await import("sharp")).default;
   const { canvas, files } = TEMPLATE_01_LAYOUT;
-  return (
+  const tpl = (
     await readTplFile(path.join("public","templates",files.template)) ||
-    await readTplFile(path.join("public","templates",files.fallbackTemplate)) ||
-    await sharp({ create:{ width:canvas.width, height:canvas.height, channels:4, background:"#FFFFFF" }}).png().toBuffer()
+    await readTplFile(path.join("public","templates",files.fallbackTemplate))
   );
+  if (tpl) {
+    console.log(`[compose-campaign] template loaded: ${files.template}, size: ${tpl.length}`);
+    return tpl;
+  }
+  console.warn("[compose-campaign] template NOT found, using white canvas");
+  return await sharp({ create:{ width:canvas.width, height:canvas.height, channels:4, background:"#FFFFFF" }}).png().toBuffer();
 }
 
 async function buildOverlay(payload: ComposePayload, W: number, H: number): Promise<Buffer> {

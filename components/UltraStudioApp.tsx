@@ -176,7 +176,7 @@ export default function UltraStudioApp() {
     const res = await fetch("/api/compose-campaign", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subjectImageDataUrl: args.subjectImageUrl, headline: args.headlineValue,
+        subjectImageUrl: args.subjectImageUrl, headline: args.headlineValue,
         priceLeft: args.priceLeftValue, priceRight: args.priceRightValue,
         pricePeriod: args.pricePeriodValue, cta: args.ctaValue,
         legalNotes: args.legalValue, legalNotice: args.legalValue,
@@ -221,7 +221,7 @@ export default function UltraStudioApp() {
       const previewUrls: string[] = [];
       for (let i = 0; i < personUrls.length; i++) {
         const url = await composeCampaignPreview({
-          subjectImageDataUrl: personUrls[i],
+          subjectImageUrl: personUrls[i],
           headlineValue: "Lorem ipsum dolor sit amet",
           priceLeftValue: "XX", priceRightValue: "XX",
           pricePeriodValue: "Lorem ipsum dolor sit amet lorecul amet",
@@ -314,7 +314,7 @@ export default function UltraStudioApp() {
       setLoadingMerge(true);
       const personImageUrl = approvedSubject || apiPersonVariants[selectedVariant] || visualVariants[selectedVariant];
       const previewUrl = await composeCampaignPreview({
-        subjectImageDataUrl: personImageUrl, headlineValue: hero,
+        subjectImageUrl: personImageUrl, headlineValue: hero,
         priceLeftValue: priceLeft, priceRightValue: priceRight,
         pricePeriodValue: pricePeriod, ctaValue: cta, legalValue: legalNotes,
         outputName: `generated-final-${Date.now()}.png`,
