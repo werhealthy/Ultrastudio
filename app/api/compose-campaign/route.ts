@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
+import { put } from "@vercel/blob";
 import { TEMPLATE_01_LAYOUT } from "@/lib/template-layout";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 type ComposePayload = {
-  subjectImageDataUrl?: string; // base64 data URL del soggetto
-  subjectImageUrl?: string;     // fallback URL (solo locale)
+  subjectImageDataUrl?: string;
+  subjectImageUrl?: string;      // URL pubblico (Blob o locale)
   headline?: string;
   priceLeft?: string;
   priceRight?: string;
@@ -79,20 +80,22 @@ function dataUrlToBuffer(du = "") {
 }
 
 async function readSubject(body: ComposePayload): Promise<Buffer | null> {
-  // Prima prova il base64 diretto
+  // 1. base64 diretto
   if (body.subjectImageDataUrl) {
     const buf = dataUrlToBuffer(body.subjectImageDataUrl);
     if (buf) return buf;
   }
-  // Fallback: URL (solo in locale)
-  if (body.subjectImageUrl && process.env.NODE_ENV !== "production") {
+  // 2. URL pubblico (Blob o localhost)
+  if (body.subjectImageUrl) {
     try {
       const url = body.subjectImageUrl.startsWith("http")
         ? body.subjectImageUrl
         : `http://localhost:3000${body.subjectImageUrl}`;
       const r = await fetch(url);
       if (r.ok) return Buffer.from(await r.arrayBuffer());
-    } catch {}
+    } catch (e) {
+      console.error("[compose-campaign] readSubject fetch error:", e);
+    }
   }
   return null;
 }
@@ -197,8 +200,8 @@ async function buildOverlay(payload: ComposePayload, W: number, H: number): Prom
     `<text class="lg" x="${COL_X}" y="${lgY0+i*lgLineH}">${esc(ln)}</text>`
   ).join("\n");
 
-  return Buffer.from(`
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="628" viewBox="0 0 1200 628">
+  // SVG con dimensioni esatte del canvas — nessun viewBox
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
 <style>
 ${fonts}
 .hl{font-family:'T','TIM Sans',Arial,sans-serif;font-weight:900;font-size:${HL.size}px;fill:${BLUE};letter-spacing:${HL.ls}px;}
@@ -256,9 +259,17 @@ export async function POST(request: Request) {
 
     const out = await sharp(tmpl).ensureAlpha().composite(composites).png().toBuffer();
 
-    // Restituisce base64 invece di salvare su disco
-    const b64 = `data:image/png;base64,${out.toString("base64")}`;
-    return NextResponse.json({ imageUrl: b64, imageB64: b64 });
+    // Carica su Vercel Blob
+    const filename = String(body.outputName || `composed-${Date.now()}.png`).replace(/[^a-zA-Z0-9._-]/g,"");
+    const fname = filename.endsWith(".png") ? filename : `${filename}.png`;
+
+    const blob = await put(fname, out, {
+      access: "public",
+      contentType: "image/png",
+    });
+
+    console.log(`[compose-campaign] uploaded: ${blob.url}`);
+    return NextResponse.json({ imageUrl: blob.url });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Composizione non riuscita.";
     console.error("[compose-campaign]", err);

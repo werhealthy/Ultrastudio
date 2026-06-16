@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 
-// Su Vercel i file generati stanno in /tmp, in locale in public/generated
-function generatedDir() {
-  return process.env.VERCEL ? "/tmp/generated" : path.join(process.cwd(), "public", "generated");
-}
-
+// File statici in public/ — serviti direttamente
 const STATIC_FILES: Record<string, string> = {
   "person-approved.png":              "demo/person-approved.png",
   "person-approved-transparent.png":  "generated/person-approved-transparent.png",
@@ -29,11 +25,6 @@ function corsHeaders(contentType = "image/png") {
   };
 }
 
-// Accetta tutti i file generati dinamicamente con naming sicuro
-function isGeneratedFile(file: string) {
-  return /^[\w-]+-\d+-\d+\.png$/.test(file) || /^[\w-]+-\d+\.png$/.test(file);
-}
-
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders() });
 }
@@ -44,25 +35,22 @@ export async function GET(
 ) {
   const { file } = await context.params;
 
-  // 1. File statici da public/
-  if (STATIC_FILES[file]) {
-    try {
-      const bytes = await readFile(path.join(process.cwd(), "public", STATIC_FILES[file]));
-      return new NextResponse(new Uint8Array(bytes), { status: 200, headers: corsHeaders() });
-    } catch {
-      return NextResponse.json({ error: "Static asset not found" }, { status: 404, headers: { "Access-Control-Allow-Origin": "*" } });
-    }
+  // Solo file statici — i file generati ora hanno URL Blob diretti
+  const relativePath = STATIC_FILES[file];
+  if (!relativePath) {
+    return NextResponse.json(
+      { error: "Asset not found" },
+      { status: 404, headers: { "Access-Control-Allow-Origin": "*" } }
+    );
   }
 
-  // 2. File generati dinamicamente (da /tmp su Vercel, da public/generated in locale)
-  if (isGeneratedFile(file)) {
-    try {
-      const bytes = await readFile(path.join(generatedDir(), file));
-      return new NextResponse(new Uint8Array(bytes), { status: 200, headers: corsHeaders() });
-    } catch {
-      return NextResponse.json({ error: "Generated file not found", file }, { status: 404, headers: { "Access-Control-Allow-Origin": "*" } });
-    }
+  try {
+    const bytes = await readFile(path.join(process.cwd(), "public", relativePath));
+    return new NextResponse(new Uint8Array(bytes), { status: 200, headers: corsHeaders() });
+  } catch {
+    return NextResponse.json(
+      { error: "Static asset not found", file },
+      { status: 404, headers: { "Access-Control-Allow-Origin": "*" } }
+    );
   }
-
-  return NextResponse.json({ error: "Asset not allowed" }, { status: 404, headers: { "Access-Control-Allow-Origin": "*" } });
 }

@@ -6,6 +6,7 @@ if (process.env.NODE_ENV !== "production") {
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import sharp from "sharp";
+import { put } from "@vercel/blob";
 import { buildVisualPrompt, type VisualPromptInput } from "@/lib/openai-prompts";
 
 export const runtime = "nodejs";
@@ -97,9 +98,8 @@ export async function POST(request: Request) {
     console.log(`[generate-visual] model:${model} size:${size} quality:${quality}`);
 
     const client = new OpenAI({ apiKey });
-
-    // Genera varianti in sequenza, restituisce base64 direttamente
-    const variantB64: string[] = [];
+    const timestamp = Date.now();
+    const personUrls: string[] = [];
 
     for (let i = 0; i < VARIANT_COUNT; i++) {
       console.log(`[generate-visual] Variant ${i+1}/${VARIANT_COUNT}`);
@@ -111,15 +111,23 @@ export async function POST(request: Request) {
       if (!originalBuffer) { console.error(`Variant ${i+1}: no image`); continue; }
 
       const cleanedBuffer = await cleanGeneratedSubject(originalBuffer);
-      variantB64.push(`data:image/png;base64,${cleanedBuffer.toString("base64")}`);
-      console.log(`[generate-visual] Variant ${i+1} done`);
+      const filename = `generated-subject-${timestamp}-${i+1}.png`;
+
+      // Carica su Vercel Blob
+      const blob = await put(filename, cleanedBuffer, {
+        access: "public",
+        contentType: "image/png",
+      });
+
+      console.log(`[generate-visual] Variant ${i+1} uploaded: ${blob.url}`);
+      personUrls.push(blob.url);
     }
 
-    if (!variantB64.length) return NextResponse.json({ error: "Nessuna variante generata." }, { status: 500 });
+    if (!personUrls.length) return NextResponse.json({ error: "Nessuna variante generata." }, { status: 500 });
 
     return NextResponse.json({
-      variants:       variantB64,  // data URLs — usati direttamente nel browser
-      personVariants: variantB64,
+      variants: personUrls,
+      personVariants: personUrls,
       model,
       size,
     });
