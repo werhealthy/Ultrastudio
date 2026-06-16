@@ -12,7 +12,7 @@ import { buildVisualPrompt, type VisualPromptInput } from "@/lib/openai-prompts"
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const VARIANT_COUNT = 1;
+const VARIANT_COUNT = 3;
 
 function buildCleanPrompt(formData: FormData, variantIndex: number): string {
   const input: VisualPromptInput = {
