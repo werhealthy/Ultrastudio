@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Next.js build
+.next/
+out/
+
+# Environment variables (API keys!)
+.env.local
+.env*.local
+
+# Generated images
+public/generated/
+
+# macOS
+.DS_Store
+
+# Debug
+npm-debug.log*
