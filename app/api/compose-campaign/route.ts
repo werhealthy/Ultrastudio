@@ -104,21 +104,60 @@ async function readTplFile(rel: string) {
   try { return await readFile(path.join(process.cwd(), rel)); } catch { return null; }
 }
 
-async function fontDataUrl(rel: string) {
-  try {
-    const b = await readFile(path.join(process.cwd(), rel));
-    return `data:font/truetype;base64,${b.toString("base64")}`;
-  } catch { return ""; }
+/**
+ * Configura fontconfig per trovare i font TIM Sans su Vercel/serverless.
+ * Sharp usa librsvg che si appoggia a fontconfig.
+ * Su Vercel i font non sono installati nel sistema — bisogna dire
+ * esplicitamente a fontconfig dove trovarli tramite fonts.conf.
+ */
+async function setupFontConfig() {
+  const { writeFile, mkdir } = await import("fs/promises");
+  const fontDir = path.join(process.cwd(), "public", "fonts");
+  const fontsCacheDir = "/tmp/fonts-cache";
+  const fontsConfPath = path.join("/tmp", "fonts.conf");
+
+  await mkdir(fontsCacheDir, { recursive: true });
+
+  const fontsConf = `<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>${fontDir}</dir>
+  <cachedir>${fontsCacheDir}</cachedir>
+  <config></config>
+</fontconfig>`;
+
+  await writeFile(fontsConfPath, fontsConf, "utf8");
+  process.env.FONTCONFIG_FILE = fontsConfPath;
 }
 
 async function fontCss() {
   const f = TEMPLATE_01_LAYOUT.files.fonts;
+  const face = (w: number, file: string) =>
+    `@font-face{font-family:'T';src:local('TIM Sans');font-weight:${w};font-style:normal;}`;
+  // Su Vercel usiamo font-family con nome registrato via fontconfig
+  // Su locale usiamo i data URL embedded
+  if (process.env.VERCEL) {
+    // Font sono in public/fonts/ — fontconfig li trova tramite fonts.conf
+    return [
+      `@font-face{font-family:'T';src:local('TIMSans-Heavy');font-weight:900;font-style:normal;}`,
+      `@font-face{font-family:'T';src:local('TIMSans-Bold');font-weight:700;font-style:normal;}`,
+      `@font-face{font-family:'T';src:local('TIMSans-Medium');font-weight:500;font-style:normal;}`,
+      `@font-face{font-family:'T';src:local('TIMSans-Regular');font-weight:400;font-style:normal;}`,
+    ].join("");
+  }
+  // Locale: embed come base64
+  const readFontB64 = async (rel: string) => {
+    try {
+      const b = await readFile(path.join(process.cwd(), rel));
+      return `data:font/truetype;base64,${b.toString("base64")}`;
+    } catch { return ""; }
+  };
   const [hv,bd,md,rg] = await Promise.all([
-    fontDataUrl(f.heavy), fontDataUrl(f.bold), fontDataUrl(f.medium), fontDataUrl(f.regular),
+    readFontB64(f.heavy), readFontB64(f.bold), readFontB64(f.medium), readFontB64(f.regular),
   ]);
-  const face = (src: string, w: number) => src
+  const faceB64 = (src: string, w: number) => src
     ? `@font-face{font-family:'T';src:url('${src}')format('truetype');font-weight:${w};font-style:normal;}` : "";
-  return face(hv,900)+face(bd,700)+face(md,500)+face(rg,400);
+  return faceB64(hv,900)+faceB64(bd,700)+faceB64(md,500)+faceB64(rg,400);
 }
 
 async function readTemplate() {
@@ -253,6 +292,9 @@ export async function POST(request: Request) {
     const W = meta.width||1200, H = meta.height||628;
 
     const composites: CompositeInput[] = [];
+
+    // Setup fontconfig per Vercel — deve girare PRIMA di Sharp
+    if (process.env.VERCEL) await setupFontConfig();
     const subBuf = await readSubject(body);
     if (subBuf) composites.push(await buildSubjectComposite(subBuf, W, H));
     composites.push({ input: await buildOverlay(body, W, H), left:0, top:0 });
