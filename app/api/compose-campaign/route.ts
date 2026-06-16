@@ -243,8 +243,8 @@ async function buildOverlay(payload: ComposePayload, W: number, H: number): Prom
     `<text class="lg" x="${COL_X}" y="${lgY0+i*lgLineH}">${esc(ln)}</text>`
   ).join("\n");
 
-  // SVG con dimensioni esatte del canvas — nessun viewBox
-  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+  // SVG con dimensioni esatte del canvas — nessun viewBox, sfondo esplicitamente trasparente
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="background:transparent">
 <style>
 ${fonts}
 .hl{font-family:'T','TIM Sans',Arial,sans-serif;font-weight:900;font-size:${HL.size}px;fill:${BLUE};letter-spacing:${HL.ls}px;}
@@ -302,7 +302,14 @@ export async function POST(request: Request) {
     if (process.env.VERCEL) await setupFontConfig();
     const subBuf = await readSubject(body);
     if (subBuf) composites.push(await buildSubjectComposite(subBuf, W, H));
-    composites.push({ input: await buildOverlay(body, W, H), left:0, top:0 });
+    // Converti SVG overlay in PNG con canale alpha — evita che rsvg aggiunga sfondo bianco
+    const svgBuf = await buildOverlay(body, W, H);
+    const overlayPng = await sharp(svgBuf)
+      .ensureAlpha()
+      .png()
+      .toBuffer();
+
+    composites.push({ input: overlayPng, left:0, top:0 });
 
     const out = await sharp(tmpl).ensureAlpha().composite(composites).png().toBuffer();
 
