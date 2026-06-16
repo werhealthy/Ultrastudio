@@ -292,17 +292,30 @@ export async function POST(request: Request) {
   try {
     const sharp = (await import("sharp")).default;
     const body  = (await request.json()) as ComposePayload;
+
+    // Setup fontconfig per Vercel — deve girare PRIMA di qualsiasi operazione Sharp
+    if (process.env.VERCEL) await setupFontConfig();
+
     const tmpl  = await readTemplate();
     const meta  = await sharp(tmpl).metadata();
     const W = meta.width||1200, H = meta.height||628;
 
+    // FIX: converti il template in un buffer RGBA completamente risolto PRIMA del composite.
+    // Su Vercel serverless, passare il buffer raw del file PNG direttamente a sharp(...).composite()
+    // può causare l'azzeramento del layer base (sfondo bianco) perché libvips non materializza
+    // il raster prima di iniziare la pipeline di compositing.
+    // Forzare un .toBuffer() intermedio garantisce che il template sia un bitmap RGBA concreto
+    // in memoria prima che qualsiasi layer venga sovrapposto.
+    const templateRgba = await sharp(tmpl)
+      .ensureAlpha()
+      .toBuffer();
+
     const composites: CompositeInput[] = [];
 
-    // Setup fontconfig per Vercel — deve girare PRIMA di Sharp
-    if (process.env.VERCEL) await setupFontConfig();
     const subBuf = await readSubject(body);
     if (subBuf) composites.push(await buildSubjectComposite(subBuf, W, H));
-    // Converti SVG overlay in PNG con canale alpha — evita che rsvg aggiunga sfondo bianco
+
+    // Converti SVG overlay in PNG con canale alpha — await esplicito obbligatorio
     const svgBuf = await buildOverlay(body, W, H);
     const overlayPng = await sharp(svgBuf)
       .ensureAlpha()
@@ -311,7 +324,11 @@ export async function POST(request: Request) {
 
     composites.push({ input: overlayPng, left:0, top:0 });
 
-    const out = await sharp(tmpl).ensureAlpha().composite(composites).png().toBuffer();
+    // Composite sul buffer RGBA risolto (non sul file grezzo)
+    const out = await sharp(templateRgba)
+      .composite(composites)
+      .png()
+      .toBuffer();
 
     // Carica su Vercel Blob
     const filename = String(body.outputName || `composed-${Date.now()}.png`).replace(/[^a-zA-Z0-9._-]/g,"");
