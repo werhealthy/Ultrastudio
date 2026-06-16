@@ -29,9 +29,9 @@ function corsHeaders(contentType = "image/png") {
   };
 }
 
-// Accetta solo file generati con naming sicuro
+// Accetta tutti i file generati dinamicamente con naming sicuro
 function isGeneratedFile(file: string) {
-  return /^(generated|composed|debug)-(subject|preview|final|original|cleaned)-[\w.-]+\.png$/.test(file);
+  return /^[\w-]+-\d+-\d+\.png$/.test(file) || /^[\w-]+-\d+\.png$/.test(file);
 }
 
 export async function OPTIONS() {

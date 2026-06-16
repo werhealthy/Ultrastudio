@@ -176,7 +176,7 @@ export default function UltraStudioApp() {
     const res = await fetch("/api/compose-campaign", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subjectImageUrl: args.subjectImageUrl, headline: args.headlineValue,
+        subjectImageDataUrl: args.subjectImageUrl, headline: args.headlineValue,
         priceLeft: args.priceLeftValue, priceRight: args.priceRightValue,
         pricePeriod: args.pricePeriodValue, cta: args.ctaValue,
         legalNotes: args.legalValue, legalNotice: args.legalValue,
@@ -221,7 +221,7 @@ export default function UltraStudioApp() {
       const previewUrls: string[] = [];
       for (let i = 0; i < personUrls.length; i++) {
         const url = await composeCampaignPreview({
-          subjectImageUrl: personUrls[i],
+          subjectImageDataUrl: personUrls[i],
           headlineValue: "Lorem ipsum dolor sit amet",
           priceLeftValue: "XX", priceRightValue: "XX",
           pricePeriodValue: "Lorem ipsum dolor sit amet lorecul amet",
@@ -292,7 +292,7 @@ export default function UltraStudioApp() {
     const res = await fetch("/api/figma/latest", {
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({
-        campaignName:"TIM WiFi Casa", personImageUrl, headline:hero,
+        campaignName:"TIM WiFi Casa", personImageUrl: undefined, personImageB64: personImageUrl, headline:hero,
         priceLeft, priceRight:formatPriceRight(priceRight), pricePeriod,
         cta, legalNotes, legalNotice:legalNotes,
         finalImageUrl: finalImageUrl || finalPreview || undefined,
@@ -314,7 +314,7 @@ export default function UltraStudioApp() {
       setLoadingMerge(true);
       const personImageUrl = approvedSubject || apiPersonVariants[selectedVariant] || visualVariants[selectedVariant];
       const previewUrl = await composeCampaignPreview({
-        subjectImageUrl: personImageUrl, headlineValue: hero,
+        subjectImageDataUrl: personImageUrl, headlineValue: hero,
         priceLeftValue: priceLeft, priceRightValue: priceRight,
         pricePeriodValue: pricePeriod, ctaValue: cta, legalValue: legalNotes,
         outputName: `generated-final-${Date.now()}.png`,
