@@ -1,13 +1,13 @@
 {
   "name": "UltraStudio",
-  "id": "ultrastudio-local-dev",
+  "id": "ultrastudio-havas-tim",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
   "editorType": ["figma"],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["none"],
+    "allowedDomains": ["https://ultrastudio.vercel.app", "https://jyvud6cnlhkjkjpv.public.blob.vercel-storage.com"],
     "devAllowedDomains": ["http://localhost:3000"]
   }
 }

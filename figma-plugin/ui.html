@@ -1,293 +1,264 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <style>
-      @font-face {
-        font-family: "TIM Sans";
-        src: url("http://localhost:3000/timsans-regular.ttf") format("truetype");
-        font-weight: 400;
-      }
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#122ac2;color:#fff;}
 
-      @font-face {
-        font-family: "TIM Sans";
-        src: url("http://localhost:3000/timsans-bold.ttf") format("truetype");
-        font-weight: 700;
-      }
+    .wrap{width:100%;height:100%;display:flex;flex-direction:column;padding:16px;gap:12px;}
 
-      * { box-sizing: border-box; }
+    /* Header */
+    .header{display:flex;justify-content:center;align-items:center;height:48px;}
+    .header img{height:36px;object-fit:contain;}
+    .header-fallback{font-size:22px;font-weight:700;color:#fff;}
 
-      html,
-      body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        font-family: "TIM Sans", Arial, sans-serif;
-        background: #122ac2;
-        color: #070707;
-      }
+    /* Slot hint */
+    .slot-hint{font-size:13px;color:rgba(255,255,255,.7);text-align:center;min-height:18px;}
 
-      .wrap {
-        width: 100%;
-        height: 100%;
-        padding: 24px;
-        display: grid;
-        grid-template-rows: auto 1fr;
-        gap: 18px;
-      }
+    /* Lista campagne */
+    .campaigns-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5);}
+    .campaigns-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+    .campaigns-list::-webkit-scrollbar{width:4px;}
+    .campaigns-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px;}
 
-      .brand {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 54px;
-      }
+    /* Card campagna */
+    .campaign-card{
+      background:#fff;border-radius:20px;padding:12px;
+      display:grid;grid-template-columns:72px 1fr;gap:10px;
+      cursor:pointer;transition:opacity .15s;border:2px solid transparent;
+    }
+    .campaign-card:hover{opacity:.9;}
+    .campaign-card.selected{border-color:#eb0028;}
+    .campaign-card.latest{border-color:#fff;}
 
-      .brand img {
-        width: 190px;
-        max-height: 50px;
-        object-fit: contain;
-      }
+    .card-preview{border-radius:10px;overflow:hidden;background:#f0f2ff;height:48px;display:flex;align-items:center;justify-content:center;}
+    .card-preview img{width:100%;height:100%;object-fit:cover;}
 
-      .brand-fallback {
-        color: white;
-        font-size: 28px;
-        line-height: 1;
-        font-weight: 700;
-      }
+    .card-info{display:flex;flex-direction:column;gap:2px;overflow:hidden;}
+    .card-badge{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#eb0028;}
+    .card-badge.latest-badge{color:#122ac2;}
+    .card-headline{font-size:13px;font-weight:700;color:#0033a1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .card-price{font-size:12px;color:#666;}
+    .card-date{font-size:10px;color:#999;margin-top:auto;}
 
-      .panel {
-        width: 100%;
-        min-height: 0;
-        background: white;
-        border-radius: 30px;
-        padding: 24px;
-        display: grid;
-        grid-template-rows: auto auto 1fr auto auto;
-        gap: 14px;
-        align-items: center;
-        text-align: center;
-      }
+    /* Empty state */
+    .empty{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;opacity:.6;}
+    .empty-icon{font-size:28px;}
+    .empty-text{font-size:13px;text-align:center;line-height:1.4;}
 
-      .kicker {
-        margin: 0;
-        color: #122ac2;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: .16em;
-        text-transform: uppercase;
-      }
+    /* Footer */
+    .footer{display:flex;flex-direction:column;gap:8px;}
+    .btn-apply{
+      width:100%;height:48px;border:0;border-radius:999px;
+      background:#eb0028;color:#fff;font-size:15px;font-weight:700;
+      cursor:pointer;transition:opacity .15s;
+    }
+    .btn-apply:disabled{opacity:.5;cursor:default;}
+    .btn-refresh{
+      width:100%;height:36px;border:1.5px solid rgba(255,255,255,.3);border-radius:999px;
+      background:transparent;color:rgba(255,255,255,.7);font-size:13px;font-weight:600;cursor:pointer;
+    }
+    .status{min-height:16px;font-size:12px;color:rgba(255,255,255,.6);text-align:center;}
+    .status.ok{color:#4caf50;font-weight:700;}
+    .status.error{color:#ff6b6b;font-weight:700;}
 
-      h1 {
-        margin: 0;
-        font-size: 32px;
-        line-height: .95;
-        letter-spacing: -.055em;
-        font-weight: 700;
-      }
+    .spinner{display:inline-block;width:14px;height:14px;border-radius:50%;
+      border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+      animation:spin .8s linear infinite;vertical-align:-3px;margin-right:6px;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Header -->
+  <div class="header">
+    <img id="logo" src="https://ultrastudio.vercel.app/logo-ultrastudio.png" alt="UltraStudio"
+         onerror="this.style.display='none';document.getElementById('hfb').style.display='block'"/>
+    <div id="hfb" class="header-fallback" style="display:none">UltraStudio</div>
+  </div>
 
-      .preview {
-        align-self: center;
-        height: 158px;
-        border: 1px solid #dfe5ff;
-        border-radius: 20px;
-        background: #f7f8ff;
-        display: grid;
-        place-items: center;
-        overflow: hidden;
-      }
+  <!-- Slot hint -->
+  <div class="slot-hint" id="slotHint">Controllo tavole...</div>
 
-      .preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        display: block;
-      }
+  <!-- Label -->
+  <div class="campaigns-label">Ultime campagne</div>
 
-      .slot-hint {
-        min-height: 20px;
-        color: #697185;
-        font-size: 13px;
-        line-height: 1.25;
-        font-weight: 400;
-      }
-
-      button.primary {
-        width: 100%;
-        height: 54px;
-        border: 0;
-        border-radius: 999px;
-        background: #122ac2;
-        color: white;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        box-shadow: 0 16px 32px rgba(18, 42, 194, .22);
-      }
-
-      button.primary:disabled {
-        opacity: .65;
-        cursor: default;
-        box-shadow: none;
-      }
-
-      .status {
-        min-height: 18px;
-        font-size: 12px;
-        line-height: 1.2;
-        color: #697185;
-        text-align: center;
-      }
-
-      .status.ok { color: #0a7a3f; font-weight: 700; }
-      .status.error { color: #e60028; font-weight: 700; }
-
-      .loading {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 3px solid rgba(255,255,255,.35);
-        border-top-color: white;
-        display: inline-block;
-        vertical-align: -3px;
-        margin-right: 8px;
-        animation: spin .8s linear infinite;
-      }
-
-      @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <div class="brand">
-        <img id="logo" src="http://localhost:3000/logo-ultrastudio.png" alt="UltraStudio" onerror="this.style.display='none'; document.getElementById('fallback').style.display='block';" />
-        <div id="fallback" class="brand-fallback" style="display:none;">UltraStudio</div>
-      </div>
-
-      <main class="panel">
-        <p class="kicker">Campagna pronta</p>
-        <h1 id="campaignName">TIM WiFi Casa</h1>
-
-        <div class="preview">
-          <img id="previewImage" src="http://localhost:3000/api/figma/asset/demo-final-campaign.png" alt="Anteprima campagna" />
-        </div>
-
-        <div class="slot-hint" id="slotHint">Controllo tavole in corso...</div>
-
-        <button class="primary" id="applyButton">Applica alle tavole</button>
-        <div class="status" id="status">Pronto.</div>
-      </main>
+  <!-- Lista -->
+  <div class="campaigns-list" id="campaignsList">
+    <div class="empty">
+      <div class="empty-icon">⏳</div>
+      <div class="empty-text">Caricamento campagne...</div>
     </div>
+  </div>
 
-    <script>
-      const ENDPOINT = "http://localhost:3000/api/figma/latest";
-      let campaign = null;
+  <!-- Footer -->
+  <div class="footer">
+    <button class="btn-apply" id="applyBtn" disabled>Applica alle tavole</button>
+    <button class="btn-refresh" id="refreshBtn">↻ Aggiorna lista</button>
+    <div class="status" id="status">Seleziona una campagna</div>
+  </div>
+</div>
 
-      const statusEl = document.getElementById("status");
-      const slotHintEl = document.getElementById("slotHint");
-      const applyButton = document.getElementById("applyButton");
-      const campaignNameEl = document.getElementById("campaignName");
-      const previewImageEl = document.getElementById("previewImage");
+<script>
+const ENDPOINT = "https://ultrastudio.vercel.app/api/figma/campaigns";
 
-      function setStatus(text, type = "") {
-        statusEl.className = `status ${type}`;
-        statusEl.textContent = text;
+let campaigns = [];
+let selectedId = null;
+
+const listEl    = document.getElementById("campaignsList");
+const applyBtn  = document.getElementById("applyBtn");
+const refreshBtn= document.getElementById("refreshBtn");
+const statusEl  = document.getElementById("status");
+const slotHint  = document.getElementById("slotHint");
+
+function setStatus(text, type = "") {
+  statusEl.className = `status ${type}`;
+  statusEl.textContent = text;
+}
+
+function setSlotHint(scan) {
+  if (!scan) return;
+  const img  = scan.imageSlots  || 0;
+  const txt  = (scan.headlineSlots||0)+(scan.priceLeftSlots||0)+(scan.priceRightSlots||0)+
+               (scan.pricePeriodSlots||0)+(scan.pricePrefixSlots||0)+(scan.ctaSlots||0);
+  if (!img && !txt) {
+    slotHint.textContent = "Nessun layer UltraStudio trovato.";
+  } else {
+    slotHint.textContent = `${img} asset · ${txt} testi pronti da aggiornare`;
+  }
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("it-IT", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+}
+
+function renderList() {
+  if (!campaigns.length) {
+    listEl.innerHTML = `<div class="empty"><div class="empty-icon">📭</div>
+      <div class="empty-text">Nessuna campagna trovata.<br>Genera una campagna su UltraStudio.</div></div>`;
+    return;
+  }
+
+  listEl.innerHTML = campaigns.map((c, idx) => {
+    const isLatest   = idx === 0;
+    const isSelected = c.id === selectedId;
+    const badgeHtml  = isLatest
+      ? `<span class="card-badge latest-badge">★ Ultima</span>`
+      : `<span class="card-badge">#${idx + 1}</span>`;
+    const previewHtml = c.finalImageUrl
+      ? `<img src="${c.finalImageUrl}" alt="anteprima" onerror="this.style.display='none'"/>`
+      : `<div style="font-size:20px;color:#ccc">📷</div>`;
+
+    return `<div class="campaign-card${isLatest?" latest":""}${isSelected?" selected":""}"
+         data-id="${c.id}" onclick="selectCampaign('${c.id}')">
+      <div class="card-preview">${previewHtml}</div>
+      <div class="card-info">
+        ${badgeHtml}
+        <div class="card-headline">${c.headline || "—"}</div>
+        <div class="card-price">${c.priceLeft || ""}${c.priceRight || ""} ${c.pricePeriod || ""}</div>
+        <div class="card-date">${formatDate(c.updatedAt)}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function selectCampaign(id) {
+  selectedId = id;
+  applyBtn.disabled = false;
+  setStatus(`Campagna selezionata`);
+  renderList();
+}
+
+async function loadCampaigns() {
+  listEl.innerHTML = `<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Caricamento...</div></div>`;
+  try {
+    const r = await fetch(ENDPOINT, { cache: "no-store" });
+    if (!r.ok) throw new Error("Errore server");
+    const data = await r.json();
+    campaigns = Array.isArray(data) ? data : (data.campaigns || []);
+    // Auto-seleziona l'ultima
+    if (campaigns.length && !selectedId) {
+      selectedId = campaigns[0].id;
+      applyBtn.disabled = false;
+    }
+    renderList();
+    setStatus(campaigns.length ? "Seleziona una campagna" : "Nessuna campagna");
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>
+      <div class="empty-text">Impossibile caricare le campagne.<br>Verifica che UltraStudio sia online.</div></div>`;
+    setStatus("Errore di connessione", "error");
+  }
+}
+
+async function imageUrlToBytes(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error("Asset non disponibile");
+  return Array.from(new Uint8Array(await r.arrayBuffer()));
+}
+
+applyBtn.addEventListener("click", async () => {
+  const campaign = campaigns.find(c => c.id === selectedId);
+  if (!campaign) return;
+
+  try {
+    applyBtn.disabled = true;
+    applyBtn.innerHTML = '<span class="spinner"></span>Applico...';
+    setStatus("Aggiornamento in corso...");
+
+    const personImageBytes = campaign.personImageUrl
+      ? await imageUrlToBytes(campaign.personImageUrl)
+      : [];
+
+    parent.postMessage({ pluginMessage: {
+      type: "apply-ultrastudio",
+      payload: {
+        personImageBytes,
+        headline:    campaign.headline    || "",
+        priceLeft:   campaign.priceLeft   || "",
+        priceRight:  campaign.priceRight  || "",
+        pricePeriod: campaign.pricePeriod || "",
+        cta:         campaign.cta         || "",
       }
+    }}, "*");
+  } catch (e) {
+    applyBtn.disabled = false;
+    applyBtn.textContent = "Applica alle tavole";
+    setStatus(e.message || "Errore", "error");
+  }
+});
 
-      function setSlotHint(scan) {
-        const imageCount = scan?.imageSlots || 0;
-        const textCount = scan?.textSlots || 0;
+refreshBtn.addEventListener("click", loadCampaigns);
 
-        if (!imageCount && !textCount) {
-          slotHintEl.textContent = "Nessun layer UltraStudio trovato nella pagina corrente.";
-          return;
-        }
+window.onmessage = (event) => {
+  const msg = event.data.pluginMessage;
+  if (!msg) return;
 
-        slotHintEl.textContent = `${imageCount} asset e ${textCount} testi pronti da aggiornare.`;
-      }
+  if (msg.type === "scan-result") {
+    setSlotHint(msg.result);
+    return;
+  }
 
-      async function fetchCampaign() {
-        const response = await fetch(ENDPOINT, { cache: "no-store" });
-        if (!response.ok) throw new Error("UltraStudio non disponibile");
-        campaign = await response.json();
+  if (msg.type === "apply-success") {
+    applyBtn.disabled = false;
+    applyBtn.textContent = "Applica alle tavole";
+    const r = msg.result;
+    setStatus(`✓ ${r.imageSlots} asset e ${r.textSlots} testi aggiornati`, "ok");
+    return;
+  }
 
-        campaignNameEl.textContent = campaign.campaignName || "Campagna pronta";
-        previewImageEl.src = campaign.finalImageUrl || "http://localhost:3000/api/figma/asset/demo-final-campaign.png";
-        setStatus("Pronto.");
-        return campaign;
-      }
+  if (msg.type === "apply-error") {
+    applyBtn.disabled = false;
+    applyBtn.textContent = "Applica alle tavole";
+    setStatus(msg.message || "Errore", "error");
+  }
+};
 
-      async function imageUrlToBytes(url) {
-        const response = await fetch(url, { cache: "no-store" });
-        if (!response.ok) throw new Error("Asset non disponibile");
-        const buffer = await response.arrayBuffer();
-        return Array.from(new Uint8Array(buffer));
-      }
-
-      applyButton.addEventListener("click", async () => {
-        try {
-          applyButton.disabled = true;
-          applyButton.innerHTML = '<span class="loading"></span>Applico...';
-          setStatus("Aggiornamento in corso...");
-
-          if (!campaign) await fetchCampaign();
-          const personImageBytes = await imageUrlToBytes(campaign.personImageUrl || campaign.imageUrl);
-
-          parent.postMessage(
-            {
-              pluginMessage: {
-                type: "apply-ultrastudio",
-                payload: {
-                  personImageBytes,
-                  headline: campaign.headline,
-                  priceLeft: campaign.priceLeft,
-                  priceRight: campaign.priceRight,
-                  pricePeriod: campaign.pricePeriod,
-                  cta: campaign.cta,
-                },
-              },
-            },
-            "*"
-          );
-        } catch (error) {
-          applyButton.disabled = false;
-          applyButton.textContent = "Applica alle tavole";
-          setStatus(error?.message || "Applicazione non riuscita.", "error");
-        }
-      });
-
-      window.onmessage = (event) => {
-        const message = event.data.pluginMessage;
-        if (!message) return;
-
-        if (message.type === "scan-result") {
-          setSlotHint(message.result);
-          return;
-        }
-
-        if (message.type === "apply-success") {
-          const imageCount = message.result?.imageSlots || 0;
-          const textCount = message.result?.textSlots || 0;
-          applyButton.disabled = false;
-          applyButton.textContent = "Applica alle tavole";
-          setStatus(`Aggiornati ${imageCount} asset e ${textCount} testi.`, "ok");
-          setSlotHint(message.result);
-          return;
-        }
-
-        if (message.type === "apply-error") {
-          applyButton.disabled = false;
-          applyButton.textContent = "Applica alle tavole";
-          setStatus(message.message || "Applicazione non riuscita.", "error");
-        }
-      };
-
-      fetchCampaign().catch(() => {
-        setStatus("Apri UltraStudio su localhost:3000 e riprova.", "error");
-      });
-
-      parent.postMessage({ pluginMessage: { type: "scan-ultrastudio" } }, "*");
-    </script>
-  </body>
+// Init
+loadCampaigns();
+parent.postMessage({ pluginMessage: { type: "scan-ultrastudio" } }, "*");
+</script>
+</body>
 </html>

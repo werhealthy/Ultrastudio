@@ -141,6 +141,15 @@ export async function POST(request: Request) {
     const redis = getRedis();
     await redis.set(LATEST_KEY, latest, { ex: 60 * 60 * 24 * 7 });
 
+    // Aggiorna lista campagne (max 10, la più recente prima)
+    const CAMPAIGNS_KEY = "ultrastudio:campaigns";
+    const MAX_CAMPAIGNS = 10;
+    const rawList = await redis.get(CAMPAIGNS_KEY);
+    const list: any[] = Array.isArray(rawList) ? rawList : [];
+    const newEntry = { id: `campaign-${Date.now()}`, ...latest };
+    const updated = [newEntry, ...list].slice(0, MAX_CAMPAIGNS);
+    await redis.set(CAMPAIGNS_KEY, updated, { ex: 60 * 60 * 24 * 30 }); // 30 giorni
+
     return NextResponse.json({ ok: true, latest }, { headers: corsHeaders() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Salvataggio non riuscito.";
